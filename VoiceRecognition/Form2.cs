@@ -67,7 +67,12 @@ namespace VoiceRecognition
             SrgsOneOf selectList = new SrgsOneOf(new string[]{
                 "selecciona",
                 "traeme",
-                "busca"
+                "busca",
+                "obten",
+                "muestrame",
+                "muestra",
+                "imprime",
+                "imprimir"
             });
             selectRule.Add(selectList);
 
@@ -76,8 +81,8 @@ namespace VoiceRecognition
              */
             SrgsRule allRule = new SrgsRule("allRule");
             SrgsOneOf allList = new SrgsOneOf(new string[] { 
-                "todos",
-                "los"
+                "los",
+                "todos los"
             });
             allRule.Add(allList);
 
@@ -87,7 +92,15 @@ namespace VoiceRecognition
                 "empleados"
             });
             tablaRule.Add(tablaList);
+            SrgsRule whereRule = new SrgsRule("whereRule");
+            SrgsOneOf whereList = new SrgsOneOf(new string[] { 
+                "igual"
+            });
+            allRule.Add(allList);
 
+
+            /*La referencia con una root ruke hace que que las reglas se unana y tengan que tener un 
+             orden especifico, quitar o comentar la regla principal y quirar del la creacion del documenteo */
             /*Regla principal*/
             SrgsRule mainRule = new SrgsRule("mainRule");
             mainRule.Scope = SrgsRuleScope.Public;
