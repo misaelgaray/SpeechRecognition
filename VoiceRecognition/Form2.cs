@@ -17,6 +17,9 @@ namespace VoiceRecognition
     {
         SpeechRecognitionEngine recEngine;
         ABCClass abc;
+        string[] edad;
+        //La lista gusrda los campos que se encontraron en el speech pa' hacer el querty
+        List<string> campos_list = new List<string>();
         
         public Form2()
         {
@@ -57,10 +60,18 @@ namespace VoiceRecognition
         public void  metodDelet(){
 
         }
-
+        
         private void Form2_Load(object sender, EventArgs e)
         {
-            recEngine = new SpeechRecognitionEngine();
+
+            recEngine = new SpeechRecognitionEngine(new System.Globalization.CultureInfo("es-MX"));
+
+
+            edad = new string[100];
+            for (int i = 0; i < edad.Length ; i++)
+            {
+                edad[i] = (i + 1).ToString();
+            }
 
             /*Reglas para Select*/
             SrgsRule selectRule = new SrgsRule("selectRule");
@@ -79,10 +90,20 @@ namespace VoiceRecognition
             /*Reglas para numero de registros
              * todos, los = all *
              */
+            SrgsRule edadRule = new SrgsRule("edadRule");
+            SrgsOneOf edadList = new SrgsOneOf(edad);
+            //edadList.Add
+            edadRule.Add(edadList);
+
             SrgsRule allRule = new SrgsRule("allRule");
             SrgsOneOf allList = new SrgsOneOf(new string[] { 
                 "los",
-                "todos los"
+                "todos los",
+                "el nombre de los",
+                "la edad de los",
+                "el puesto de los",
+                "el sueldo de los",
+                "el sueldo y el nombre de los"
             });
             allRule.Add(allList);
 
@@ -92,11 +113,23 @@ namespace VoiceRecognition
                 "empleados"
             });
             tablaRule.Add(tablaList);
-            SrgsRule whereRule = new SrgsRule("whereRule");
+
+            /*Campos de la tabla*/
+            SrgsRule camposRule = new SrgsRule("camposRule");
+            SrgsOneOf camposList = new SrgsOneOf(new string[]{
+                    "el nombre de los",
+                    "la edad de los",
+                    "el puesto de los",
+                    "el sueldo de los"
+                });
+            camposRule.Add(camposList);
+        /*   SrgsRule whereRule = new SrgsRule("whereRule");
             SrgsOneOf whereList = new SrgsOneOf(new string[] { 
-                "igual"
+                ">",
+                "<",
+                "="
             });
-            allRule.Add(allList);
+            whereRule.Add(whereList);*/
 
 
             /*La referencia con una root ruke hace que que las reglas se unana y tengan que tener un 
@@ -116,18 +149,26 @@ namespace VoiceRecognition
             SrgsRuleRef tablaRef = new SrgsRuleRef(tablaRule, "theTabla");
             mainRule.Add(tablaRef);
 
+            
+         /*  SrgsRuleRef whereRef = new SrgsRuleRef(whereRule, "theWhere");
+            mainRule.Add(whereRef);*/
+
+         /*  SrgsRuleRef edadRef = new SrgsRuleRef(edadRule, "theEdad");
+            mainRule.Add(edadRef);*/
+
             //Creando el documento con las reglas
             SrgsDocument newDocumento = new SrgsDocument();
             newDocumento.Rules.Add(new SrgsRule[]{
-                mainRule,
+              mainRule,
                 selectRule,
                 allRule,
                 tablaRule
             });
-            newDocumento.Root = mainRule;
+            //newDocumento.Rules.
+           newDocumento.Root = mainRule;
 
             //Agragar gramatica al engine
-            Grammar grammar = new Grammar(newDocumento,"mainRule");
+            Grammar grammar = new Grammar(newDocumento);
 
             recEngine.LoadGrammar(grammar);
 
@@ -152,45 +193,109 @@ namespace VoiceRecognition
         private void recEngine_SpeechRecognized(object sender, SpeechRecognizedEventArgs e)
         {//Engine
             string result = e.Result.Text;
-            string select = "", all = "", tabla = "";
+            string select = "", all = "", tabla = "", campos = "";
             bool what = false;
 
-           // if (e.Result != null)
-           // {
-                if (e.Result.Semantics != null && e.Result.Semantics.Count != 0)
+         
+            //El arreglo guarda los campos que tiene la tabla para hacer el analisis del speech
+            string[] campos_array = new string[]{
+            "edad",
+            "nombre",
+            "sueldo",
+            "puesto"
+            };
+
+           
+               if (e.Result.Semantics != null && e.Result.Semantics.Count != 0)
                 {
                     if (e.Result.Semantics.ContainsKey("theSelect"))
                     {
                         select = e.Result.Semantics["theSelect"].Value.ToString();
+                        txt_sql.Text = "SELECT ";
                         what = true;
                     }
-                    //else MessageBox.Show("Error");
+                    else what = false;
 
                     if (e.Result.Semantics.ContainsKey("theAll"))
                     {
                         all = e.Result.Semantics["theAll"].Value.ToString();
+                        
+                            /*Revisar campos a usar por ahora solo validamos un campo*/
+                            /*Para validacion ptima pero no hay tiempo, consultar los nombres de los
+                             campos de la BD meterlos en la lista y hacer un loop para buscar dentro
+                             dede la semantica de theAll todos los campos que se encuantren, se agregan
+                             a una lista, y despues se usan para hacer el query*/
+                            /*Issue: hay que agregar las reglas para todos los campos en la SrgsRULE*/
+                           
+                                if (all.Contains("edad"))
+                                {
+                                    campos_list.Add("edad");
+                                }
+                              /*  else if (all.Contains("sueldo") && all.Contains("nombre"))
+                                {
+                                    campos_list.Add("sueldo");
+                                    campos_list.Add("nombre");
+                                }*/
+                                else if (all.Contains("sueldo"))
+                                {
+                                    campos_list.Add("sueldo");
+                                }
+                                else if (all.Contains("nombre"))
+                                {
+                                    campos_list.Add("nombre");
+                                }
+                                else if (all.Contains("puesto"))
+                                {
+                                    campos_list.Add("puesto");
+                                }
+                                else //Si no se cumple ninguna regla se opta por un all
+                                {
+                                    campos_list.Add("*");
+                                }
+                        //Concatenamos el * o el campo a buscar al txt_sql
+                                foreach (var campo in campos_list)
+                                {
+                                    txt_sql.Text += campo+" ";
+                                }
+                                
+                        
                         what = true;
                     }
-                    //else MessageBox.Show("Error");
+                    else what = false;
 
                     if (e.Result.Semantics.ContainsKey("theTabla"))
                     {
-                        tabla = e.Result.Semantics["theTabla"].Value.ToString();
-                        what = true;
+                            tabla = e.Result.Semantics["theTabla"].Value.ToString();
+                            txt_sql.Text += "FROM " + tabla+ ";";
+                            what = true;
                     }
-                   // else MessageBox.Show("Error");
-                    txt_todo.Text = result;
-                   txt_natural.Text = String.Format("{0}\n{1}\n{2}",select,all,tabla);
-                    txt_sql.Text = getSQL(what);
-                    abc.startConn();
+                    else what = false;
 
-                    var emp = abc.getEmpleados(getSQL(what));
-                    foreach (var empleado in emp)
-                    {
-                        list_emp.Items.Add(String.Format("{0}", empleado));
+                    txt_todo.Text = result;
+
+                    if (what)
+                   {
+                        txt_todo.Text = result;
+                       // txt_natural.Text = select + tabla;
+                       
+                      //  txt_sql.Text = getSQL(what);
+
+                        abc.startConn();
+
+                        var emp = abc.getEmpleados(txt_sql.Text);
+                        foreach (var empleado in emp)
+                        {
+                            list_emp.Items.Add(String.Format("{0}", empleado));
+                        }
                     }
+                    else MessageBox.Show("Habla Mas recio");
+                    
+                    
+                    
+            
+                    
                 }
-            //}
+               else MessageBox.Show("Habla Mas recio");
         }
 
         private void label1_Click(object sender, EventArgs e)
